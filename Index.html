@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RADAR Team Scoreboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: radial-gradient(circle at top, #1e1b4b 0%, #0f172a 100%);
+    }
+    /* Animated Radar Scanning Pulse Logo Effect */
+    .radar-container {
+      position: relative;
+      width: 70px;
+      height: 70px;
+      border-radius: 50%;
+      border: 2px solid #06b6d4;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(6, 182, 212, 0.05);
+    }
+    .radar-pulse {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 2px solid #22d3ee;
+      animation: pulse 2.5s infinite linear;
+      opacity: 0;
+    }
+    @keyframes pulse {
+      0% { transform: scale(0.6); opacity: 0.8; }
+      100% { transform: scale(1.4); opacity: 0; }
+    }
+    /* Custom Scrollbar styling */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+  </style>
+</head>
+<body class="text-slate-100 min-h-screen pb-12 antialiased">
+
+  <div class="max-w-xl mx-auto px-4 pt-8">
+    
+    <header class="flex flex-col items-center justify-center text-center mb-8">
+      <div class="radar-container mb-3 shadow-[0_0_20px_rgba(6,182,212,0.3)]">
+        <div class="radar-pulse"></div>
+        <span class="text-cyan-400 font-extrabold text-xl tracking-widest z-10">RDR</span>
+      </div>
+      <h1 class="text-3xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-400">
+        RADAR Team Scoreboard
+      </h1>
+      <p class="text-slate-400 text-sm mt-1 uppercase tracking-widest font-semibold">Youth Conference Console</p>
+    </header>
+
+    <div id="alertBox" class="hidden mb-6 p-4 rounded-xl border flex items-start gap-3 transition-all duration-300 transform scale-95 opacity-0">
+      <div id="alertIcon" class="text-xl"></div>
+      <div id="alertMessage" class="text-sm font-medium"></div>
+    </div>
+
+    <section class="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-2xl p-6 shadow-2xl mb-8 relative">
+      <h2 class="text-lg font-bold text-slate-200 mb-4 flex items-center gap-2">
+        <span class="h-2 w-2 rounded-full bg-cyan-400 animate-ping"></span>
+        Distribute Points
+      </h2>
+      
+      <form id="scoreForm" onsubmit="handleFormSubmit(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Target Conference Team</label>
+          <select id="teamSelect" required class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition disabled:opacity-50">
+            <option value="" disabled selected>Loading dynamic team index...</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Points Modifier (-50 to +50)</label>
+            <input type="number" id="pointsInput" required min="-50" max="50" placeholder="e.g. +10 or -5" 
+                   class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition disabled:opacity-50">
+          </div>
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Secure Access Key</label>
+            <input type="password" id="accessCodeInput" required placeholder="••••••••" 
+                   class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-cyan-500 focus:ring-2 focus:ring-cyan-500/20 transition disabled:opacity-50">
+          </div>
+        </div>
+
+        <button type="submit" id="submitBtn" class="w-full mt-2 bg-gradient-to-r from-cyan-500 to-indigo-600 hover:from-cyan-400 hover:to-indigo-500 active:scale-[0.99] text-white font-bold py-3 px-4 rounded-xl transition shadow-lg shadow-indigo-950/50 flex items-center justify-center gap-2 disabled:opacity-50 disabled:pointer-events-none">
+          <span>Commit Score Matrix</span>
+        </button>
+      </form>
+
+      <div id="formLoadingOverlay" class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm rounded-2xl flex items-center justify-center hidden">
+        <div class="animate-spin rounded-full h-10 w-10 border-4 border-cyan-500 border-t-transparent"></div>
+      </div>
+    </section>
+
+    <section class="bg-slate-900/80 backdrop-blur-md border border-slate-800 rounded-2xl p-6 shadow-2xl">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-bold text-slate-200 tracking-tight">Live Standing Leaderboard</h2>
+        <button onclick="loadLeaderboardData()" title="Force Refresh" class="text-xs text-cyan-400 hover:text-cyan-300 font-medium transition flex items-center gap-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.253 8H18"></path></svg>
+          Sync Live
+        </button>
+      </div>
+
+      <div class="overflow-hidden rounded-xl border border-slate-800 bg-slate-950/50">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-900 border-b border-slate-800 text-slate-400 text-xs font-bold uppercase tracking-wider">
+              <th class="py-3.5 px-4 text-center w-20">Rank</th>
+              <th class="py-3.5 px-4">Team Designation</th>
+              <th class="py-3.5 px-4 text-right w-24">Score Matrix</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboardBody" class="divide-y divide-slate-900 text-sm font-medium">
+            <tr>
+              <td colspan="3" class="py-8 text-center text-slate-500">Retrieving operational network scores...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </div>
+
+  <script>
+    // Initialize standard state execution context loops on document payload delivery
+    document.addEventListener("DOMContentLoaded", () => {
+      loadTeamSelectionDropdown();
+      loadLeaderboardData();
+    });
+
+    /**
+     * Shows customized action messages using UI notification containers.
+     */
+    function displayAlert(type, message) {
+      const alertBox = document.getElementById("alertBox");
+      const alertIcon = document.getElementById("alertIcon");
+      const alertMessage = document.getElementById("alertMessage");
+
+      alertBox.className = "mb-6 p-4 rounded-xl border flex items-start gap-3 transition-all duration-300 transform scale-100 opacity-100";
+      alertMessage.innerText = message;
+
+      if (type === "success") {
+        alertBox.classList.add("bg-emerald-950/40", "border-emerald-500/30", "text-emerald-400");
+        alertIcon.innerText = "✨";
+      } else {
+        alertBox.classList.add("bg-rose-950/40", "border-rose-500/30", "text-rose-400");
+        alertIcon.innerText = "⚠️";
+      }
+      
+      // Auto dismiss banner layout after standard reading intervals
+      setTimeout(() => {
+        alertBox.classList.add("scale-95", "opacity-0");
+        setTimeout(() => alertBox.classList.add("hidden"), 300);
+      }, 5000);
+    }
+
+    /**
+     * Controls the processing screen overlay visibility.
+     */
+    function toggleFormLoading(show) {
+      const overlay = document.getElementById("formLoadingOverlay");
+      const btn = document.getElementById("submitBtn");
+      if (show) {
+        overlay.classList.remove("hidden");
+        btn.disabled = true;
+      } else {
+        overlay.classList.add("hidden");
+        btn.disabled = false;
+      }
+    }
+
+    /**
+     * Executes asynchronous lookup to populate the selection element from the sheet.
+     */
+    function loadTeamSelectionDropdown() {
+      google.script.run
+        .withSuccessHandler((teams) => {
+          const dropdown = document.getElementById("teamSelect");
+          dropdown.innerHTML = '<option value="" disabled selected>Choose a team...</option>';
+          
+          if(teams.length === 0) {
+            dropdown.innerHTML = '<option value="" disabled>No active teams cataloged</option>';
+            return;
+          }
+          
+          teams.forEach(team => {
+            const op = document.createElement("option");
+            op.value = team;
+            op.textContent = team;
+            dropdown.appendChild(op);
+          });
+        })
+        .withFailureHandler((error) => {
+          displayAlert("error", "Failed to resolve server team index: " + error.message);
+        })
+        .getTeams();
+    }
+
+    /**
+     * Polls the sheets backend to reconstruct the leaderboard UI.
+     */
+    function loadLeaderboardData() {
+      google.script.run
+        .withSuccessHandler((data) => {
+          const tbody = document.getElementById("leaderboardBody");
+          tbody.innerHTML = "";
+          
+          if (data.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="3" class="py-6 text-center text-slate-500">No active scoreboard records.</td></tr>`;
+            return;
+          }
+          
+          data.forEach((record, index) => {
+            const rankPosition = index + 1;
+            let rankDisplay = "";
+            let rowStyle = "hover:bg-slate-900/30 transition-colors";
+            
+            // Assign custom podium decorations
+            if (rankPosition === 1) {
+              rankDisplay = `<span class="inline-flex items-center justify-center bg-amber-500/10 text-amber-400 px-2.5 py-1 rounded-lg text-xs font-bold border border-amber-500/20">🥇 1st</span>`;
+              rowStyle = "bg-gradient-to-r from-amber-500/5 to-transparent hover:from-amber-500/10 transition-colors";
+            } else if (rankPosition === 2) {
+              rankDisplay = `<span class="inline-flex items-center justify-center bg-slate-300/10 text-slate-300 px-2.5 py-1 rounded-lg text-xs font-bold border border-slate-300/20">🥈 2nd</span>`;
+            } else if (rankPosition === 3) {
+              rankDisplay = `<span class="inline-flex items-center justify-center bg-amber-700/10 text-amber-600 px-2.5 py-1 rounded-lg text-xs font-bold border border-amber-700/20">🥉 3rd</span>`;
+            } else {
+              rankDisplay = `<span class="text-slate-500 font-mono text-sm">${rankPosition}</span>`;
+            }
+            
+            const tr = document.createElement("tr");
+            tr.className = rowStyle;
+            tr.innerHTML = `
+              <td class="py-3.5 px-4 text-center">${rankDisplay}</td>
+              <td class="py-3.5 px-4 text-slate-200 font-semibold">${escapeHtml(record.name)}</td>
+              <td class="py-3.5 px-4 text-right font-mono font-bold text-base ${record.score >= 0 ? 'text-cyan-400' : 'text-rose-400'}">
+                ${record.score > 0 ? '+' : ''}${record.score}
+              </td>
+            `;
+            tbody.appendChild(tr);
+          });
+        })
+        .withFailureHandler((error) => {
+          displayAlert("error", "Error mapping leaderboard sync loops: " + error.message);
+        })
+        .getLeaderboard();
+    }
+
+    /**
+     * Intercepts and validates the client HTML entry parameters before dispatching.
+     */
+    function handleFormSubmit(event) {
+      event.preventDefault();
+      
+      const teamName = document.getElementById("teamSelect").value;
+      const points = parseInt(document.getElementById("pointsInput").value, 10);
+      const accessCode = document.getElementById("accessCodeInput").value;
+      
+      // Strict Front-End UI Guard Rules Check
+      if (!teamName) {
+        displayAlert("error", "Please select a target team name.");
+        return;
+      }
+      if (isNaN(points) || points < -50 || points > 50) {
+        displayAlert("error", "Validation Fault: Points value must scale between -50 and +50.");
+        return;
+      }
+      if (!accessCode.trim()) {
+        displayAlert("error", "Security Guard: Access validation code is required.");
+        return;
+      }
+      
+      toggleFormLoading(true);
+      
+      // Execute non-blocking RPC thread processing
+      google.script.run
+        .withSuccessHandler((response) => {
+          toggleFormLoading(false);
+          if (response.success) {
+            displayAlert("success", response.message);
+            // Clear point mod fields while maintaining setup environment for rapid entry
+            document.getElementById("pointsInput").value = "";
+            // Instant asynchronous UI table regeneration call
+            loadLeaderboardData();
+          } else {
+            displayAlert("error", response.message);
+          }
+        })
+        .withFailureHandler((error) => {
+          toggleFormLoading(false);
+          displayAlert("error", "Fatal runtime networking exception: " + error.message);
+        })
+        .updateScore(teamName, points, accessCode);
+    }
+
+    /**
+     * Protection helper utility against XSS vectors during direct payload binding operations.
+     */
+    function escapeHtml(str) {
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>
